@@ -2367,10 +2367,8 @@ class TestBaseConfigInheritance:
         assert deploy.stages[0].gpu_memory_utilization == 0.9
 
 
-class TestPlatformOverrides:
-    """Test platform-specific deploy config overrides."""
-
-    def test_qwen3_omni_musa_clears_parent_quantization_for_audio_stages(self):
+class TestQuantizationInheritance:
+    def test_qwen3_omni_audio_stages_do_not_inherit_checkpoint_quantization(self):
         pipeline = resolve_pipeline_config(
             "qwen3_omni_moe",
             Q3_OMNI_ALL_STAGES_HF_CONFIG,
@@ -2379,14 +2377,19 @@ class TestPlatformOverrides:
         deploy_path = Path(get_deploy_config_path("qwen3_omni_moe.yaml"))
 
         base_stages = merge_pipeline_deploy(pipeline, load_deploy_config(deploy_path))
-        assert "hf_overrides" not in base_stages[1].yaml_engine_args
-        assert "hf_overrides" not in base_stages[2].yaml_engine_args
-
-        musa = _apply_platform_overrides(load_deploy_config(deploy_path), platform="musa")
-        musa_stages = merge_pipeline_deploy(pipeline, musa)
         expected = {"quantization_config": None}
-        assert musa_stages[1].yaml_engine_args["hf_overrides"] == expected
-        assert musa_stages[2].yaml_engine_args["hf_overrides"] == expected
+        assert "hf_overrides" not in base_stages[0].yaml_engine_args
+        assert base_stages[1].yaml_engine_args["hf_overrides"] == expected
+        assert base_stages[2].yaml_engine_args["hf_overrides"] == expected
+
+        explicit = load_deploy_config(deploy_path)
+        explicit.quantization = "fp8"
+        explicit_stages = merge_pipeline_deploy(pipeline, explicit)
+        assert all("hf_overrides" not in stage.yaml_engine_args for stage in explicit_stages)
+
+
+class TestPlatformOverrides:
+    """Test platform-specific deploy config overrides."""
 
     def test_qwen3_tts_rocm_disables_code2wav_outer_cudagraph(self):
         deploy_path = Path(get_deploy_config_path("qwen3_tts.yaml"))

@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM-Omni project
 """Qwen3-Omni-MoE pipeline topology (frozen).
 
 Stage 0: Thinker — multimodal understanding + text generation
@@ -51,6 +51,7 @@ QWEN3_OMNI_PIPELINE = PipelineConfig(
             execution_type=StageExecutionType.LLM_AR,
             input_sources=(0,),
             hf_config_name="talker_config",
+            inherit_parent_quantization=False,
             engine_output_type="latent",
             sync_process_input_func=f"{_PROC}.thinker2talker_token_only",
             custom_process_next_stage_input_func=(f"{_PROC}.talker2code2wav_full_payload"),
@@ -69,6 +70,7 @@ QWEN3_OMNI_PIPELINE = PipelineConfig(
             final_output=True,
             final_output_type="audio",
             hf_config_name="thinker_config",
+            inherit_parent_quantization=False,
             engine_output_type="audio",
             sampling_constraints={"detokenize": True},
             requires_full_payload_input=True,

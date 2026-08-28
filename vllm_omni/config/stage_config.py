@@ -217,6 +217,8 @@ class StagePipelineConfig:
     owns_tokenizer: bool = False
     requires_multimodal_data: bool = False
     hf_config_name: str | None = None
+    # Whether this stage inherits quantization_config from its parent HF config.
+    inherit_parent_quantization: bool = True
     engine_output_type: str | None = None
     model_arch: str | None = None
     # The model keeps per-request execution state while awaiting the next
@@ -901,6 +903,10 @@ def _build_engine_args(
                 continue
             engine_args[k] = v
         engine_args.update(ds.engine_extras)
+    if not ps.inherit_parent_quantization and engine_args.get("quantization") is None:
+        hf_overrides = engine_args.setdefault("hf_overrides", {})
+        if isinstance(hf_overrides, dict):
+            hf_overrides.setdefault("quantization_config", None)
     # Materialize the resolved pipeline-wide async_chunk value into every
     # stage so explicit False overrides do not get lost downstream.
     engine_args["async_chunk"] = bool(deploy.async_chunk)
